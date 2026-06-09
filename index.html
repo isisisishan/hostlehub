@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HostelHub - Connected Hostel Life</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Toast Notification -->
+  <div id="toast-notification" class="toast">
+    <span>✅</span>
+    <span class="toast-msg">Operation completed successfully!</span>
+  </div>
+
+  <div class="app-container">
+
+    <!-- ========================================== -->
+    <!-- 1. LOGIN GATEWAY VIEW -->
+    <!-- ========================================== -->
+    <main id="login-screen" class="login-container">
+      <div class="glass-panel login-card">
+        <div class="login-header">
+          <div class="logo-badge">H</div>
+          <h2>HostelHub</h2>
+          <p>Login to your hostel student or management portal</p>
+        </div>
+
+        <form id="login-form">
+          <div class="form-group" style="text-align: left;">
+            <label for="username">Username</label>
+            <input type="text" id="username" class="form-control" placeholder="Enter username" required>
+          </div>
+          <div class="form-group" style="text-align: left;">
+            <label for="password">Password</label>
+            <input type="password" id="password" class="form-control" placeholder="••••••••" required>
+          </div>
+          <div class="form-group" style="text-align: left;">
+            <label for="role-select">Login As</label>
+            <select id="role-select" class="form-control">
+              <option value="student">Student (Aarav Sharma)</option>
+              <option value="warden">Warden (Hostel Warden)</option>
+              <option value="admin">Hostel Hub Admin (You)</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px; padding: 12px;">
+            Secure Login
+          </button>
+        </form>
+
+        <!-- Developer Shortcuts Section -->
+        <div class="dev-shortcut-section">
+          <p>Demo Quick Login Accounts</p>
+          <div class="dev-shortcut-buttons">
+            <button class="btn btn-shortcut btn-secondary" id="quick-student">Student</button>
+            <button class="btn btn-shortcut btn-secondary" id="quick-warden" style="background: var(--accent-orange); color: white;">Warden</button>
+            <button class="btn btn-shortcut btn-primary" id="quick-admin">Admin</button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- ========================================== -->
+    <!-- 2. MAIN APPLICATION WORKSPACE -->
+    <!-- ========================================== -->
+    <div id="app-dashboard" style="display: none;">
+      
+      <!-- Unified Header -->
+      <header>
+        <div class="branding">
+          <div class="logo-badge">H</div>
+          <div>
+            <h1>HostelHub</h1>
+            <p style="font-size: 0.75rem; color: var(--text-secondary); margin-top: -4px;">Connecting Campus Cohorts</p>
+          </div>
+        </div>
+        
+        <div class="user-info">
+          <div style="text-align: right;">
+            <div id="current-user-name" style="font-weight: 700; font-size: 0.95rem;">Aarav Sharma</div>
+            <div id="current-user-room" style="font-size: 0.8rem; color: var(--text-secondary);">Room B-204</div>
+          </div>
+          <span id="current-user-role" class="user-role-tag student">Student</span>
+          <button id="btn-logout" class="btn btn-danger" style="padding: 6px 12px; font-size: 0.8rem;">Logout</button>
+        </div>
+      </header>
+
+      <!-- ========================================== -->
+      <!-- A. STUDENT PORTAL DASHBOARD -->
+      <!-- ========================================== -->
+      <div id="student-dashboard" style="display: none;">
+        <div class="dashboard-grid">
+          
+          <!-- Student Sidebar (Mess Menu & Quick Stats) -->
+          <aside>
+            <!-- Mess Menu Widget -->
+            <div class="glass-panel menu-widget" id="menu-widget-container">
+              <!-- Rendered via JS -->
+            </div>
+            
+            <!-- Quick Menu Actions -->
+            <div style="margin-top: 15px; display: grid; grid-template-columns: 1fr; gap: 10px;">
+              <button class="btn btn-secondary" id="btn-view-weekly-menu" style="width: 100%;">
+                📅 View Full Weekly Schedule
+              </button>
+            </div>
+          </aside>
+
+          <!-- Student Main Workspace (Tabs: Complaints & Delivery co-ordering) -->
+          <main>
+            <div class="tab-navigation">
+              <button class="tab-btn active" id="tab-btn-complaints">Grievances & Complaints</button>
+              <button class="tab-btn" id="tab-btn-pools">Group Delivery Pools</button>
+            </div>
+
+            <!-- TAB 1: Grievance & Complaints Panel -->
+            <section id="panel-complaints" class="glass-panel section-panel">
+              <div class="section-header">
+                <h2>📢 Hostel Maintenance Complaints</h2>
+                <button class="btn btn-primary" id="btn-show-complaint-form">➕ File New Complaint</button>
+              </div>
+
+              <!-- New Complaint Form (Toggled via button) -->
+              <div id="complaint-form-wrapper" style="display: none; margin-bottom: 24px; padding: 20px; background: rgba(0,0,0,0.2); border-radius: 10px; border: 1px dashed rgba(255, 255, 255, 0.1);">
+                <h3 style="margin-bottom: 15px; font-family: var(--font-title);">File a Maintenance Request</h3>
+                <form id="complaint-submission-form">
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group">
+                      <label for="comp-category">Issue Category</label>
+                      <select id="comp-category" class="form-control" required>
+                        <option value="Food">Food & Mess Quality</option>
+                        <option value="Room">Room Maintenance</option>
+                        <option value="Washroom">Washroom Hygiene</option>
+                        <option value="Electricity">Electricity & Fans</option>
+                        <option value="Wi-Fi">Wi-Fi & Internet</option>
+                        <option value="Other">Other Issues</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label for="comp-urgency">Urgency Level</label>
+                      <select id="comp-urgency" class="form-control" required>
+                        <option value="Low">Low (General Feedback)</option>
+                        <option value="Medium" selected>Medium (Standard Repair)</option>
+                        <option value="Critical">Critical (Immediate Help)</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label for="comp-title">Short Issue Title</label>
+                    <input type="text" id="comp-title" class="form-control" placeholder="e.g., Water tap leaking in washroom" required>
+                  </div>
+                  <div class="form-group">
+                    <label for="comp-desc">Full Description & Details</label>
+                    <textarea id="comp-desc" class="form-control" placeholder="Provide details like exact location, symptoms, or food service time..." required></textarea>
+                  </div>
+                  <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button type="button" class="btn btn-danger" id="btn-cancel-complaint">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Submit Ticket</button>
+                  </div>
+                </form>
+              </div>
+
+              <!-- Complaints History Feed -->
+              <h3 style="margin-bottom: 12px; font-family: var(--font-title); font-size: 1.1rem;">My Grievance Tickets</h3>
+              <div id="student-complaints-container">
+                <!-- Rendered via JS -->
+              </div>
+            </section>
+
+            <!-- TAB 2: Delivery Pools Panel -->
+            <section id="panel-pools" class="glass-panel section-panel" style="display: none;">
+              <div class="section-header">
+                <h2>🛒 Group Ordering Delivery Pools</h2>
+                <button class="btn btn-secondary" id="btn-show-pool-form">🚀 Start Group Delivery</button>
+              </div>
+
+              <!-- Active listings -->
+              <div id="delivery-polls-container">
+                <!-- Rendered via JS -->
+              </div>
+            </section>
+
+          </main>
+        </div>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- B. WARDEN PORTAL DASHBOARD -->
+      <!-- ========================================== -->
+      <div id="warden-dashboard" style="display: none;">
+        <!-- Stats summary row -->
+        <div class="stats-row">
+          <div class="glass-panel stat-card">
+            <div id="warden-stat-pending" class="stat-num" style="color: var(--status-pending);">0</div>
+            <div class="stat-label">Pending Tickets</div>
+          </div>
+          <div class="glass-panel stat-card">
+            <div id="warden-stat-inprogress" class="stat-num" style="color: var(--status-inprogress);">0</div>
+            <div class="stat-label">In Progress</div>
+          </div>
+          <div class="glass-panel stat-card">
+            <div id="warden-stat-resolved" class="stat-num" style="color: var(--status-resolved);">0</div>
+            <div class="stat-label">Resolved tickets</div>
+          </div>
+          <div class="glass-panel stat-card">
+            <div id="warden-stat-critical" class="stat-num" style="color: var(--status-critical);">0</div>
+            <div class="stat-label">Critical Alerts</div>
+          </div>
+        </div>
+
+        <!-- Complaints management console -->
+        <div class="glass-panel section-panel">
+          <div class="section-header">
+            <h2>🛠️ Warden Resolution Console</h2>
+            
+            <!-- Filters -->
+            <div class="filter-row">
+              <select id="warden-filter-status" class="filter-select">
+                <option value="all">All Statuses</option>
+                <option value="Pending">Pending Only</option>
+                <option value="In Progress">In Progress Only</option>
+                <option value="Resolved">Resolved Only</option>
+              </select>
+              <select id="warden-filter-category" class="filter-select">
+                <option value="all">All Categories</option>
+                <option value="Food">Food</option>
+                <option value="Room">Rooms</option>
+                <option value="Washroom">Washrooms</option>
+                <option value="Electricity">Electricity</option>
+                <option value="Wi-Fi">Wi-Fi</option>
+                <option value="Other">Others</option>
+              </select>
+              <select id="warden-filter-urgency" class="filter-select">
+                <option value="all">All Urgency Levels</option>
+                <option value="Critical">Critical Only</option>
+                <option value="Medium">Medium Only</option>
+                <option value="Low">Low Only</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="warden-complaints-container">
+            <!-- Rendered via JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- C. ADMIN STUDIO DASHBOARD (You) -->
+      <!-- ========================================== -->
+      <div id="admin-dashboard" style="display: none;">
+        
+        <!-- Admin Stats row -->
+        <div class="stats-row">
+          <div class="glass-panel stat-card">
+            <div id="admin-stat-total-comp" class="stat-num">0</div>
+            <div class="stat-label">Total Complaints filed</div>
+          </div>
+          <div class="glass-panel stat-card">
+            <div id="admin-stat-active-pools" class="stat-num" style="color: var(--accent-cyan);">0</div>
+            <div class="stat-label">Active Co-Orders</div>
+          </div>
+          <div class="glass-panel stat-card">
+            <div id="admin-stat-solved-pct" class="stat-num" style="color: var(--status-resolved);">0%</div>
+            <div class="stat-label">Grievance Solved Rate</div>
+          </div>
+          <div class="glass-panel stat-card">
+            <div id="admin-stat-menu-days" class="stat-num" style="color: var(--accent-purple);">7 Days</div>
+            <div class="stat-label">Mess Menu Configured</div>
+          </div>
+        </div>
+
+        <div class="dashboard-grid">
+          <!-- Left Column: Menu Day Selector -->
+          <aside class="glass-panel" style="padding: 24px;">
+            <h3 style="font-family: var(--font-title); margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">Select Week Day</h3>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <button class="btn btn-secondary admin-day-select active" data-day="Monday" style="justify-content: flex-start;">Monday</button>
+              <button class="btn btn-secondary admin-day-select" data-day="Tuesday" style="justify-content: flex-start;">Tuesday</button>
+              <button class="btn btn-secondary admin-day-select" data-day="Wednesday" style="justify-content: flex-start;">Wednesday</button>
+              <button class="btn btn-secondary admin-day-select" data-day="Thursday" style="justify-content: flex-start;">Thursday</button>
+              <button class="btn btn-secondary admin-day-select" data-day="Friday" style="justify-content: flex-start;">Friday</button>
+              <button class="btn btn-secondary admin-day-select" data-day="Saturday" style="justify-content: flex-start;">Saturday</button>
+              <button class="btn btn-secondary admin-day-select" data-day="Sunday" style="justify-content: flex-start;">Sunday</button>
+            </div>
+          </aside>
+
+          <!-- Right Column: Menu Editor Form -->
+          <main class="glass-panel" id="admin-menu-form-container" style="padding: 24px;">
+            <!-- Rendered via JS -->
+          </main>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- ========================================== -->
+  <!-- 3. MODALS & DIALOGS -->
+  <!-- ========================================== -->
+
+  <!-- Modal: Weekly Menu Schedule -->
+  <div class="modal-overlay" id="weekly-menu-modal">
+    <div class="glass-panel modal-content">
+      <button class="modal-close" id="btn-close-weekly-modal">&times;</button>
+      <h3 class="modal-title">📅 Hostel Mess Weekly Menu Schedule</h3>
+      <div id="weekly-menu-table-container">
+        <!-- Rendered via JS -->
+      </div>
+      <div style="margin-top: 20px; text-align: right; font-size: 0.8rem; color: var(--text-secondary);">
+        * Menu is subject to change. Contact the Admin panel to modify schedule slots.
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Start Co-ordering Pool -->
+  <div class="modal-overlay" id="start-pool-modal">
+    <div class="glass-panel modal-content" style="max-width: 500px;">
+      <button class="modal-close" id="btn-close-pool-modal">&times;</button>
+      <h3 class="modal-title">🚀 Start Delivery Pool Group</h3>
+      
+      <form id="start-pool-form">
+        <div class="form-group">
+          <label for="pool-app">Delivery Platform / App</label>
+          <select id="pool-app" class="form-control" required>
+            <option value="Blinkit">Blinkit (10-min groceries)</option>
+            <option value="Zomato">Zomato (Food Delivery)</option>
+            <option value="Swiggy">Swiggy (Food & Instamart)</option>
+            <option value="Zepto">Zepto (Instant items)</option>
+            <option value="Instamart">Swiggy Instamart</option>
+            <option value="Other">Other Delivery Service</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="pool-time">Target Ordering Time</label>
+          <input type="text" id="pool-time" class="form-control" placeholder="e.g., 08:30 PM, In 15 mins" required>
+        </div>
+        <div class="form-group">
+          <label for="pool-spot">Meeting & Pick-Up Spot</label>
+          <input type="text" id="pool-spot" class="form-control" placeholder="e.g., Gate A Security Cabin, Lobby" required>
+        </div>
+        <div class="form-group">
+          <label for="pool-desc">Short Pool Description</label>
+          <textarea id="pool-desc" class="form-control" placeholder="e.g., Ordering cold drinks & chips for study session. Join to hit free delivery limit!" required></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px;">
+          Launch Active Group Pool
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Join Co-ordering Pool -->
+  <div class="modal-overlay" id="join-pool-modal">
+    <div class="glass-panel modal-content" style="max-width: 450px;">
+      <button class="modal-close" id="btn-close-join-modal">&times;</button>
+      <h3 class="modal-title">➕ Add items to <span id="join-app-name" style="color:var(--accent-purple)">Delivery</span> Pool</h3>
+      
+      <form id="join-pool-form">
+        <input type="hidden" id="join-poll-id">
+        <div class="form-group">
+          <label for="join-name">Your Full Name</label>
+          <input type="text" id="join-name" class="form-control" placeholder="e.g., Rahul Verma" required>
+        </div>
+        <div class="form-group">
+          <label for="join-room">Your Room Number</label>
+          <input type="text" id="join-room" class="form-control" placeholder="e.g., C-104" required>
+        </div>
+        <div class="form-group">
+          <label for="join-items">What items do you want to add?</label>
+          <input type="text" id="join-items" class="form-control" placeholder="e.g., 1x Kurkure (Green), 1x Pepsi 500ml" required>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px;">
+          Request Group Inclusion
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Application Coordinator Scripts -->
+  <script src="data.js"></script>
+  <script src="menu.js"></script>
+  <script src="complaints.js"></script>
+  <script src="polls.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
