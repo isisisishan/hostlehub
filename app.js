@@ -188,8 +188,8 @@
         .maybeSingle();
 
       if (existError) {
-        showToast(`Error checking user: ${existError.message} (Is users table created?)`);
-        console.error(existError);
+        showToast("Error checking account. Please try again.");
+        console.error("Supabase check error:", existError);
         submitBtn.disabled = false;
         submitBtn.textContent = "Register Account";
         return;
@@ -213,8 +213,8 @@
         }]);
 
       if (error) {
-        showToast(`Registration Error: ${error.message} (Did you disable RLS?)`);
-        console.error(error);
+        showToast("Error registering account. Please try again.");
+        console.error("Supabase insert error:", error);
       } else {
         showToast("Account created! Please log in.");
         // Redirect to login form
@@ -282,7 +282,7 @@
 
     if (error) {
       console.error("Authentication error:", error);
-      showToast(`Database error: ${error.message} (Is users table created?)`);
+      showToast("Error logging in. Please try again.");
       return;
     }
 
