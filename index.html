@@ -27,14 +27,20 @@
           <p>Login to your hostel student or management portal</p>
         </div>
 
+        <!-- Login Form -->
         <form id="login-form">
           <div class="form-group" style="text-align: left;">
-            <label for="username">Username</label>
+            <label for="username" id="login-label-user">Username</label>
             <input type="text" id="username" class="form-control" placeholder="Enter username" required>
           </div>
           <div class="form-group" style="text-align: left;">
-            <label for="password">Password</label>
+            <label for="password" id="login-label-pass">Password</label>
             <input type="password" id="password" class="form-control" placeholder="••••••••" required>
+          </div>
+          <!-- Room Number input (shown dynamically for student role only) -->
+          <div class="form-group" style="text-align: left;" id="login-room-group">
+            <label for="login-room">Room Number</label>
+            <input type="text" id="login-room" class="form-control" placeholder="e.g., B-204">
           </div>
           <div class="form-group" style="text-align: left;">
             <label for="role-select">Login As</label>
@@ -47,6 +53,33 @@
           <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px; padding: 12px;">
             Secure Login
           </button>
+          
+          <p style="margin-top: 15px; font-size: 0.85rem;" id="register-toggle-text">
+            New Student? <a href="#" id="btn-show-register" style="color: var(--accent-cyan); text-decoration: none; font-weight: 700;">Create Account</a>
+          </p>
+        </form>
+
+        <!-- Registration Form (Hidden by default) -->
+        <form id="register-form" style="display: none;">
+          <h3 style="margin-bottom: 20px; font-family: var(--font-title); font-size: 1.3rem;">Student Registration</h3>
+          <div class="form-group" style="text-align: left;">
+            <label for="reg-username">Full Name (Username)</label>
+            <input type="text" id="reg-username" class="form-control" placeholder="e.g., Rahul Verma" required>
+          </div>
+          <div class="form-group" style="text-align: left;">
+            <label for="reg-password">Password</label>
+            <input type="password" id="reg-password" class="form-control" placeholder="Create password" required>
+          </div>
+          <div class="form-group" style="text-align: left;">
+            <label for="reg-room">Room Number</label>
+            <input type="text" id="reg-room" class="form-control" placeholder="e.g., B-204" required>
+          </div>
+          <button type="submit" class="btn btn-secondary" style="width: 100%; margin-top: 10px; padding: 12px;">
+            Register Account
+          </button>
+          <p style="margin-top: 15px; font-size: 0.85rem;">
+            Already have an account? <a href="#" id="btn-show-login" style="color: var(--accent-purple); text-decoration: none; font-weight: 700;">Back to Login</a>
+          </p>
         </form>
 
         <!-- Developer Shortcuts Section -->

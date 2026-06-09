@@ -6,7 +6,17 @@
     loginForm: document.getElementById('login-form'),
     usernameInput: document.getElementById('username'),
     passwordInput: document.getElementById('password'),
+    loginRoomGroup: document.getElementById('login-room-group'),
+    loginRoomInput: document.getElementById('login-room'),
     roleSelect: document.getElementById('role-select'),
+    registerToggleText: document.getElementById('register-toggle-text'),
+    
+    registerForm: document.getElementById('register-form'),
+    regUsernameInput: document.getElementById('reg-username'),
+    regPasswordInput: document.getElementById('reg-password'),
+    regRoomInput: document.getElementById('reg-room'),
+    btnShowRegister: document.getElementById('btn-show-register'),
+    btnShowLogin: document.getElementById('btn-show-login'),
     
     appDashboard: document.getElementById('app-dashboard'),
     currentUserName: document.getElementById('current-user-name'),
@@ -85,57 +95,157 @@
   // 1. AUTHENTICATION & LOGIN FLOW
   // ==========================================
   function setupAuthListeners() {
-    const userLabel = document.querySelector('label[for="username"]');
-    const passLabel = document.querySelector('label[for="password"]');
+    const userLabel = document.getElementById('login-label-user');
+    const passLabel = document.getElementById('login-label-pass');
 
-    // Dynamically adjust inputs based on role
+    // Toggle between login and registration forms
+    dom.btnShowRegister.addEventListener('click', (e) => {
+      e.preventDefault();
+      dom.loginForm.style.display = 'none';
+      dom.registerForm.style.display = 'block';
+    });
+
+    dom.btnShowLogin.addEventListener('click', (e) => {
+      e.preventDefault();
+      dom.registerForm.style.display = 'none';
+      dom.loginForm.style.display = 'block';
+    });
+
+    // Default: Show Room Number field on load since "student" is default dropdown selection
+    dom.loginRoomGroup.style.display = 'block';
+    dom.loginRoomInput.required = true;
+    userLabel.textContent = "Username / Student ID";
+    dom.usernameInput.placeholder = "e.g., student1";
+    passLabel.textContent = "Password";
+    dom.passwordInput.type = "password";
+    dom.passwordInput.placeholder = "••••••••";
+
+    // Dynamically adjust inputs based on role selection
     dom.roleSelect.addEventListener('change', () => {
       const role = dom.roleSelect.value;
       if (role === 'student') {
-        if (userLabel) userLabel.textContent = "Your Full Name";
-        dom.usernameInput.placeholder = "e.g., Rahul Verma";
-        dom.usernameInput.value = "";
+        userLabel.textContent = "Username / Student ID";
+        dom.usernameInput.placeholder = "e.g., student1";
         
-        if (passLabel) passLabel.textContent = "Room Number";
-        dom.passwordInput.type = "text";
-        dom.passwordInput.placeholder = "e.g., B-204";
-        dom.passwordInput.value = "";
-      } else {
-        if (userLabel) userLabel.textContent = "Username";
-        dom.usernameInput.placeholder = "Enter username";
-        dom.usernameInput.value = "";
-        
-        if (passLabel) passLabel.textContent = "Password";
+        passLabel.textContent = "Password";
         dom.passwordInput.type = "password";
         dom.passwordInput.placeholder = "••••••••";
-        dom.passwordInput.value = "";
+
+        dom.loginRoomGroup.style.display = 'block';
+        dom.loginRoomInput.required = true;
+        dom.registerToggleText.style.display = 'block';
+      } else {
+        userLabel.textContent = "Staff Username";
+        dom.usernameInput.placeholder = "Enter staff username";
+        
+        passLabel.textContent = "Password";
+        dom.passwordInput.type = "password";
+        dom.passwordInput.placeholder = "••••••••";
+
+        dom.loginRoomGroup.style.display = 'none';
+        dom.loginRoomInput.required = false;
+        dom.registerToggleText.style.display = 'none';
       }
+      dom.usernameInput.value = "";
+      dom.passwordInput.value = "";
+      dom.loginRoomInput.value = "";
     });
 
-    dom.loginForm.addEventListener('submit', (e) => {
+    // Handle Login Form Submission
+    dom.loginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const username = dom.usernameInput.value.trim();
       const password = dom.passwordInput.value.trim();
       const role = dom.roleSelect.value;
+      const roomNo = dom.loginRoomInput.value.trim();
       
-      processLogin(username, password, role);
+      const submitBtn = dom.loginForm.querySelector('button[type="submit"]');
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Authenticating...";
+
+      await processLogin(username, password, role, roomNo);
+      
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Secure Login";
+    });
+
+    // Handle Student Registration Form Submission
+    dom.registerForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = dom.regUsernameInput.value.trim();
+      const password = dom.regPasswordInput.value.trim();
+      const roomNo = dom.regRoomInput.value.trim();
+
+      const submitBtn = dom.registerForm.querySelector('button[type="submit"]');
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Creating account...";
+
+      // 1. Check if username exists
+      const { data: userExists } = await window.supabaseClient
+        .from('users')
+        .select('username')
+        .match({ username: username })
+        .maybeSingle();
+
+      if (userExists) {
+        showToast("Username already exists!");
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Register Account";
+        return;
+      }
+
+      // 2. Insert new student user
+      const { error } = await window.supabaseClient
+        .from('users')
+        .insert([{
+          username: username,
+          password: password,
+          role: 'student',
+          room_no: roomNo
+        }]);
+
+      if (error) {
+        showToast("Error registering account. Please try again.");
+        console.error(error);
+      } else {
+        showToast("Account created! Please log in.");
+        // Redirect to login form
+        dom.registerForm.reset();
+        dom.registerForm.style.display = 'none';
+        dom.loginForm.style.display = 'block';
+        
+        // Auto fill username
+        dom.roleSelect.value = 'student';
+        dom.roleSelect.dispatchEvent(new Event('change'));
+        dom.usernameInput.value = username;
+      }
+      
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Register Account";
     });
 
     // Quick Login Shortcuts (Developer assistance)
-    document.getElementById('quick-student').addEventListener('click', () => {
+    document.getElementById('quick-student').addEventListener('click', async () => {
       dom.roleSelect.value = 'student';
       dom.roleSelect.dispatchEvent(new Event('change'));
-      processLogin('Aarav Sharma', 'B-204', 'student');
+      dom.usernameInput.value = 'student1';
+      dom.passwordInput.value = 'password123';
+      dom.loginRoomInput.value = 'B-204';
+      await processLogin('student1', 'password123', 'student', 'B-204');
     });
-    document.getElementById('quick-warden').addEventListener('click', () => {
+    document.getElementById('quick-warden').addEventListener('click', async () => {
       dom.roleSelect.value = 'warden';
       dom.roleSelect.dispatchEvent(new Event('change'));
-      processLogin('warden', 'warden', 'warden');
+      dom.usernameInput.value = 'warden';
+      dom.passwordInput.value = 'warden';
+      await processLogin('warden', 'warden', 'warden', '');
     });
-    document.getElementById('quick-admin').addEventListener('click', () => {
+    document.getElementById('quick-admin').addEventListener('click', async () => {
       dom.roleSelect.value = 'admin';
       dom.roleSelect.dispatchEvent(new Event('change'));
-      processLogin('admin', 'admin', 'admin');
+      dom.usernameInput.value = 'admin';
+      dom.passwordInput.value = 'admin';
+      await processLogin('admin', 'admin', 'admin', '');
     });
 
     dom.btnLogout.addEventListener('click', () => {
@@ -146,33 +256,47 @@
       dom.loginScreen.style.display = 'flex';
       
       dom.loginForm.reset();
-      // Reset labels back to default student state
       dom.roleSelect.value = 'student';
       dom.roleSelect.dispatchEvent(new Event('change'));
     });
   }
 
-  function processLogin(username, password, selectedRole) {
+  async function processLogin(username, password, selectedRole, roomNo) {
+    let matchQuery = { username: username, password: password, role: selectedRole };
     if (selectedRole === 'student') {
-      // For student: username = Name, password = Room No
-      const name = (username === 'student' || !username) ? 'Aarav Sharma' : username;
-      const room = (password === 'student' || !password) ? 'B-204' : password;
-      currentUser = { name: name, room: `Room ${room}`, role: 'student' };
-    } else if (selectedRole === 'warden' && username === 'warden' && password === 'warden') {
-      currentUser = { name: 'Mrs. Indrani Roy', room: 'Warden Office (GF)', role: 'warden' };
-    } else if (selectedRole === 'admin' && username === 'admin' && password === 'admin') {
-      currentUser = { name: 'Dev Admin (CSE Student)', room: 'Server Room A-10', role: 'admin' };
-    } else {
-      // General custom login
-      if (selectedRole === 'warden') {
-        currentUser = { name: username, room: 'Admin Block', role: 'warden' };
-      } else {
-        currentUser = { name: username, room: 'Hostel Office', role: 'admin' };
-      }
+      matchQuery.room_no = roomNo;
     }
 
+    const { data: userRecord, error } = await window.supabaseClient
+      .from('users')
+      .select('*')
+      .match(matchQuery)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Authentication error:", error);
+      showToast("Database error during authentication!");
+      return;
+    }
+
+    if (!userRecord) {
+      if (selectedRole === 'student') {
+        showToast("Invalid Name, Password, or Room Number!");
+      } else {
+        showToast("Invalid Staff Username or Password!");
+      }
+      return;
+    }
+
+    // Login successful
+    currentUser = {
+      name: userRecord.username,
+      room: userRecord.role === 'student' ? `Room ${userRecord.room_no}` : 'Staff Block',
+      role: userRecord.role
+    };
+
     localStorage.setItem('hostelhub_session', JSON.stringify(currentUser));
-    enterDashboard();
+    await enterDashboard();
     showToast(`Welcome back, ${currentUser.name}!`);
   }
 
