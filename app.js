@@ -181,11 +181,19 @@
       submitBtn.textContent = "Creating account...";
 
       // 1. Check if username exists
-      const { data: userExists } = await window.supabaseClient
+      const { data: userExists, error: existError } = await window.supabaseClient
         .from('users')
         .select('username')
         .match({ username: username })
         .maybeSingle();
+
+      if (existError) {
+        showToast(`Error checking user: ${existError.message} (Is users table created?)`);
+        console.error(existError);
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Register Account";
+        return;
+      }
 
       if (userExists) {
         showToast("Username already exists!");
@@ -205,7 +213,7 @@
         }]);
 
       if (error) {
-        showToast("Error registering account. Please try again.");
+        showToast(`Registration Error: ${error.message} (Did you disable RLS?)`);
         console.error(error);
       } else {
         showToast("Account created! Please log in.");
@@ -224,28 +232,15 @@
       submitBtn.textContent = "Register Account";
     });
 
-    // Quick Login Shortcuts (Developer assistance)
-    document.getElementById('quick-student').addEventListener('click', async () => {
-      dom.roleSelect.value = 'student';
-      dom.roleSelect.dispatchEvent(new Event('change'));
-      dom.usernameInput.value = 'student1';
-      dom.passwordInput.value = 'password123';
-      dom.loginRoomInput.value = 'B-204';
-      await processLogin('student1', 'password123', 'student', 'B-204');
+    // Quick Login Shortcuts - Bypasses Supabase check for easy review of all interfaces
+    document.getElementById('quick-student').addEventListener('click', () => {
+      loginAsDemo('Aarav Sharma', 'B-204', 'student');
     });
-    document.getElementById('quick-warden').addEventListener('click', async () => {
-      dom.roleSelect.value = 'warden';
-      dom.roleSelect.dispatchEvent(new Event('change'));
-      dom.usernameInput.value = 'warden';
-      dom.passwordInput.value = 'warden';
-      await processLogin('warden', 'warden', 'warden', '');
+    document.getElementById('quick-warden').addEventListener('click', () => {
+      loginAsDemo('Mrs. Indrani Roy', 'Warden Office (GF)', 'warden');
     });
-    document.getElementById('quick-admin').addEventListener('click', async () => {
-      dom.roleSelect.value = 'admin';
-      dom.roleSelect.dispatchEvent(new Event('change'));
-      dom.usernameInput.value = 'admin';
-      dom.passwordInput.value = 'admin';
-      await processLogin('admin', 'admin', 'admin', '');
+    document.getElementById('quick-admin').addEventListener('click', () => {
+      loginAsDemo('Dev Admin (CSE Student)', 'Server Room A-10', 'admin');
     });
 
     dom.btnLogout.addEventListener('click', () => {
@@ -259,6 +254,18 @@
       dom.roleSelect.value = 'student';
       dom.roleSelect.dispatchEvent(new Event('change'));
     });
+  }
+
+  // Bypasses database validation to quickly inspect UI features
+  function loginAsDemo(username, roomValue, role) {
+    currentUser = {
+      name: username,
+      room: role === 'student' ? `Room ${roomValue}` : roomValue,
+      role: role
+    };
+    localStorage.setItem('hostelhub_session', JSON.stringify(currentUser));
+    enterDashboard();
+    showToast(`Demo mode active: Welcome, ${currentUser.name}!`);
   }
 
   async function processLogin(username, password, selectedRole, roomNo) {
@@ -275,13 +282,13 @@
 
     if (error) {
       console.error("Authentication error:", error);
-      showToast("Database error during authentication!");
+      showToast(`Database error: ${error.message} (Is users table created?)`);
       return;
     }
 
     if (!userRecord) {
       if (selectedRole === 'student') {
-        showToast("Invalid Name, Password, or Room Number!");
+        showToast("Invalid Student Username, Password, or Room Number!");
       } else {
         showToast("Invalid Staff Username or Password!");
       }
