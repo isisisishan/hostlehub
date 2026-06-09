@@ -85,6 +85,33 @@
   // 1. AUTHENTICATION & LOGIN FLOW
   // ==========================================
   function setupAuthListeners() {
+    const userLabel = document.querySelector('label[for="username"]');
+    const passLabel = document.querySelector('label[for="password"]');
+
+    // Dynamically adjust inputs based on role
+    dom.roleSelect.addEventListener('change', () => {
+      const role = dom.roleSelect.value;
+      if (role === 'student') {
+        if (userLabel) userLabel.textContent = "Your Full Name";
+        dom.usernameInput.placeholder = "e.g., Rahul Verma";
+        dom.usernameInput.value = "";
+        
+        if (passLabel) passLabel.textContent = "Room Number";
+        dom.passwordInput.type = "text";
+        dom.passwordInput.placeholder = "e.g., B-204";
+        dom.passwordInput.value = "";
+      } else {
+        if (userLabel) userLabel.textContent = "Username";
+        dom.usernameInput.placeholder = "Enter username";
+        dom.usernameInput.value = "";
+        
+        if (passLabel) passLabel.textContent = "Password";
+        dom.passwordInput.type = "password";
+        dom.passwordInput.placeholder = "••••••••";
+        dom.passwordInput.value = "";
+      }
+    });
+
     dom.loginForm.addEventListener('submit', (e) => {
       e.preventDefault();
       const username = dom.usernameInput.value.trim();
@@ -94,13 +121,20 @@
       processLogin(username, password, role);
     });
 
+    // Quick Login Shortcuts (Developer assistance)
     document.getElementById('quick-student').addEventListener('click', () => {
-      processLogin('student', 'student', 'student');
+      dom.roleSelect.value = 'student';
+      dom.roleSelect.dispatchEvent(new Event('change'));
+      processLogin('Aarav Sharma', 'B-204', 'student');
     });
     document.getElementById('quick-warden').addEventListener('click', () => {
+      dom.roleSelect.value = 'warden';
+      dom.roleSelect.dispatchEvent(new Event('change'));
       processLogin('warden', 'warden', 'warden');
     });
     document.getElementById('quick-admin').addEventListener('click', () => {
+      dom.roleSelect.value = 'admin';
+      dom.roleSelect.dispatchEvent(new Event('change'));
       processLogin('admin', 'admin', 'admin');
     });
 
@@ -112,20 +146,25 @@
       dom.loginScreen.style.display = 'flex';
       
       dom.loginForm.reset();
+      // Reset labels back to default student state
+      dom.roleSelect.value = 'student';
+      dom.roleSelect.dispatchEvent(new Event('change'));
     });
   }
 
   function processLogin(username, password, selectedRole) {
-    if (selectedRole === 'student' && username === 'student' && password === 'student') {
-      currentUser = { name: 'Aarav Sharma', room: 'Room B-204', role: 'student' };
+    if (selectedRole === 'student') {
+      // For student: username = Name, password = Room No
+      const name = (username === 'student' || !username) ? 'Aarav Sharma' : username;
+      const room = (password === 'student' || !password) ? 'B-204' : password;
+      currentUser = { name: name, room: `Room ${room}`, role: 'student' };
     } else if (selectedRole === 'warden' && username === 'warden' && password === 'warden') {
       currentUser = { name: 'Mrs. Indrani Roy', room: 'Warden Office (GF)', role: 'warden' };
     } else if (selectedRole === 'admin' && username === 'admin' && password === 'admin') {
       currentUser = { name: 'Dev Admin (CSE Student)', room: 'Server Room A-10', role: 'admin' };
     } else {
-      if (selectedRole === 'student') {
-        currentUser = { name: username, room: 'Room C-302', role: 'student' };
-      } else if (selectedRole === 'warden') {
+      // General custom login
+      if (selectedRole === 'warden') {
         currentUser = { name: username, room: 'Admin Block', role: 'warden' };
       } else {
         currentUser = { name: username, room: 'Hostel Office', role: 'admin' };
