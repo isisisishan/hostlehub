@@ -1,51 +1,81 @@
-// Complaints Module (Global Namespace)
+// Complaints Module (Supabase Connected)
 (function() {
-  // Load complaints from localStorage or seed
-  function getComplaintsState() {
-    let complaints = localStorage.getItem('hostelhub_complaints');
-    if (!complaints) {
-      localStorage.setItem('hostelhub_complaints', JSON.stringify(window.MOCK_COMPLAINTS));
-      complaints = JSON.stringify(window.MOCK_COMPLAINTS);
+  // Load complaints from Supabase
+  async function getComplaintsState() {
+    try {
+      const { data, error } = await window.supabaseClient
+        .from('complaints')
+        .select('*')
+        .order('date', { ascending: false });
+        
+      if (error) throw error;
+      
+      // Map columns back to JS structure
+      return (data || []).map(row => ({
+        id: row.id,
+        studentName: row.student_name,
+        roomNo: row.room_no,
+        category: row.category,
+        title: row.title,
+        description: row.description,
+        urgency: row.urgency,
+        status: row.status,
+        date: row.date,
+        resolutionNote: row.resolution_note
+      }));
+    } catch (e) {
+      console.error("Failed to load complaints from Supabase:", e);
+      return [];
     }
-    return JSON.parse(complaints);
   }
 
-  function saveComplaintsState(complaints) {
-    localStorage.setItem('hostelhub_complaints', JSON.stringify(complaints));
-  }
-
-  // Add a new complaint
-  function addComplaint(complaintData) {
-    const complaints = getComplaintsState();
-    const newComplaint = {
-      id: `comp_${Date.now()}`,
-      date: new Date().toISOString(),
-      status: 'Pending',
-      resolutionNote: '',
-      ...complaintData
-    };
-    complaints.unshift(newComplaint); // Add to the top
-    saveComplaintsState(complaints);
-    return newComplaint;
-  }
-
-  // Update a complaint status & note (Warden action)
-  function updateComplaint(id, status, resolutionNote) {
-    const complaints = getComplaintsState();
-    const index = complaints.findIndex(c => c.id === id);
-    if (index !== -1) {
-      complaints[index].status = status;
-      complaints[index].resolutionNote = resolutionNote || '';
-      saveComplaintsState(complaints);
+  // Add a new complaint to Supabase
+  async function addComplaint(complaintData) {
+    try {
+      const { data, error } = await window.supabaseClient
+        .from('complaints')
+        .insert([{
+          student_name: complaintData.studentName,
+          room_no: complaintData.roomNo,
+          category: complaintData.category,
+          title: complaintData.title,
+          description: complaintData.description,
+          urgency: complaintData.urgency,
+          status: 'Pending',
+          resolution_note: ''
+        }]);
+        
+      if (error) throw error;
       return true;
+    } catch (e) {
+      console.error("Failed to add complaint to Supabase:", e);
+      return false;
     }
-    return false;
+  }
+
+  // Update a complaint status & note (Warden action) in Supabase
+  async function updateComplaint(id, status, resolutionNote) {
+    try {
+      const { error } = await window.supabaseClient
+        .from('complaints')
+        .update({ status: status, resolution_note: resolutionNote || '' })
+        .match({ id: id });
+        
+      if (error) throw error;
+      return true;
+    } catch (e) {
+      console.error("Failed to update complaint in Supabase:", e);
+      return false;
+    }
   }
 
   // Render student's complaints
-  function renderStudentComplaints(container, currentStudentName) {
+  async function renderStudentComplaints(container, currentStudentName) {
     if (!container) return;
-    const complaints = getComplaintsState();
+    
+    container.innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-secondary)">Syncing complaints from database...</div>`;
+    
+    const complaints = await getComplaintsState();
     
     const myComplaints = complaints.filter(c => c.studentName.toLowerCase() === currentStudentName.toLowerCase() || currentStudentName === 'student');
 
@@ -72,7 +102,7 @@
         <div class="complaint-card ${c.status.toLowerCase().replace(' ', '')}">
           <div class="complaint-meta">
             <div class="complaint-top-left">
-              <span class="complaint-id">#${c.id.split('_')[1] || c.id}</span>
+              <span class="complaint-id">#${c.id.split('-')[0] || c.id}</span>
               <span class="complaint-category">${c.category}</span>
             </div>
             <span class="urgency-badge ${c.urgency.toLowerCase()}">${c.urgency} Urgency</span>
@@ -104,9 +134,12 @@
   }
 
   // Render Warden Complaints Dashboard with Filters
-  function renderWardenComplaints(container, filters = { status: 'all', category: 'all', urgency: 'all' }) {
+  async function renderWardenComplaints(container, filters = { status: 'all', category: 'all', urgency: 'all' }) {
     if (!container) return;
-    const complaints = getComplaintsState();
+    
+    container.innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-secondary)">Syncing active grievance desk...</div>`;
+    
+    const complaints = await getComplaintsState();
 
     // Apply filters
     const filtered = complaints.filter(c => {
@@ -139,7 +172,7 @@
         <div class="complaint-card ${c.status.toLowerCase().replace(' ', '')}" id="warden-card-${c.id}">
           <div class="complaint-meta">
             <div class="complaint-top-left">
-              <span class="complaint-id">#${c.id.split('_')[1] || c.id}</span>
+              <span class="complaint-id">#${c.id.split('-')[0] || c.id}</span>
               <span class="complaint-category">${c.category}</span>
             </div>
             <span class="urgency-badge ${c.urgency.toLowerCase()}">${c.urgency} Urgency</span>
@@ -181,23 +214,27 @@
 
     // Add listeners to Warden buttons
     container.querySelectorAll('.btn-inprogress-trigger').forEach(btn => {
-      btn.addEventListener('click', (e) => {
+      btn.addEventListener('click', async (e) => {
         const id = e.currentTarget.dataset.id;
         const card = container.querySelector(`#warden-card-${id}`);
         const note = card.querySelector('.note-input').value;
-        updateComplaint(id, 'In Progress', note);
-        renderWardenComplaints(container, filters);
+        
+        e.currentTarget.disabled = true;
+        await updateComplaint(id, 'In Progress', note);
+        await renderWardenComplaints(container, filters);
         showToast('Status updated to In Progress');
       });
     });
 
     container.querySelectorAll('.btn-resolve-trigger').forEach(btn => {
-      btn.addEventListener('click', (e) => {
+      btn.addEventListener('click', async (e) => {
         const id = e.currentTarget.dataset.id;
         const card = container.querySelector(`#warden-card-${id}`);
         const note = card.querySelector('.note-input').value;
-        updateComplaint(id, 'Resolved', note || 'Resolved by warden.');
-        renderWardenComplaints(container, filters);
+        
+        e.currentTarget.disabled = true;
+        await updateComplaint(id, 'Resolved', note || 'Resolved by warden.');
+        await renderWardenComplaints(container, filters);
         showToast('Complaint resolved successfully!');
       });
     });
@@ -215,7 +252,6 @@
   // Export to global scope
   window.ComplaintsModule = {
     getComplaintsState,
-    saveComplaintsState,
     addComplaint,
     updateComplaint,
     renderStudentComplaints,

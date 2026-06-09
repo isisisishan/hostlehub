@@ -1,73 +1,121 @@
-// Delivery Co-Ordering Pools Module (Global Namespace)
+// Delivery Co-Ordering Pools Module (Supabase Connected)
 (function() {
-  // Get current state from localStorage or seed
-  function getPollsState() {
-    let polls = localStorage.getItem('hostelhub_polls');
-    if (!polls) {
-      localStorage.setItem('hostelhub_polls', JSON.stringify(window.MOCK_POLLS));
-      polls = JSON.stringify(window.MOCK_POLLS);
+  // Get current state from Supabase
+  async function getPollsState() {
+    try {
+      const { data, error } = await window.supabaseClient
+        .from('polls')
+        .select('*')
+        .order('status', { ascending: true }); // Active first (Active < Closed alphabetically)
+        
+      if (error) throw error;
+      
+      return (data || []).map(row => ({
+        id: row.id,
+        creatorName: row.creator_name,
+        roomNo: row.room_no,
+        appName: row.app_name,
+        targetTime: row.target_time,
+        meetingSpot: row.meeting_spot,
+        description: row.description,
+        status: row.status,
+        members: row.members // jsonb array
+      }));
+    } catch (e) {
+      console.error("Failed to load delivery pools from Supabase:", e);
+      return [];
     }
-    return JSON.parse(polls);
   }
 
-  function savePollsState(polls) {
-    localStorage.setItem('hostelhub_polls', JSON.stringify(polls));
+  // Add a new delivery pool to Supabase
+  async function addPoll(pollData) {
+    try {
+      const { data, error } = await window.supabaseClient
+        .from('polls')
+        .insert([{
+          creator_name: pollData.creatorName,
+          room_no: pollData.roomNo,
+          app_name: pollData.appName,
+          target_time: pollData.targetTime,
+          meeting_spot: pollData.meetingSpot,
+          description: pollData.description,
+          status: 'Active',
+          members: [
+            {
+              name: pollData.creatorName,
+              room: pollData.roomNo,
+              items: "Host (Order Coordinator)"
+            }
+          ]
+        }]);
+
+      if (error) throw error;
+      return true;
+    } catch (e) {
+      console.error("Failed to create delivery pool in Supabase:", e);
+      return false;
+    }
   }
 
-  // Add a new delivery pool
-  function addPoll(pollData) {
-    const polls = getPollsState();
-    const newPoll = {
-      id: `poll_${Date.now()}`,
-      status: 'Active',
-      members: [
-        {
-          name: pollData.creatorName,
-          room: pollData.roomNo,
-          items: "Host (Order Coordinator)"
-        }
-      ],
-      ...pollData
-    };
-    polls.unshift(newPoll);
-    savePollsState(polls);
-    return newPoll;
-  }
+  // Join an existing pool in Supabase (modifying the JSON array)
+  async function joinPoll(pollId, memberName, roomNo, itemsList) {
+    try {
+      // 1. Fetch current members
+      const { data, error: fetchError } = await window.supabaseClient
+        .from('polls')
+        .select('members, status')
+        .match({ id: pollId })
+        .single();
+        
+      if (fetchError || !data || data.status !== 'Active') {
+        throw new Error("Pool is not active or could not be found.");
+      }
 
-  // Join an existing pool
-  function joinPoll(pollId, memberName, roomNo, itemsList) {
-    const polls = getPollsState();
-    const index = polls.findIndex(p => p.id === pollId);
-    if (index !== -1 && polls[index].status === 'Active') {
-      polls[index].members.push({
+      // 2. Append new member details
+      const updatedMembers = [...data.members, {
         name: memberName,
         room: roomNo,
         items: itemsList || 'Join Order'
-      });
-      savePollsState(polls);
+      }];
+
+      // 3. Update row in Supabase
+      const { error: updateError } = await window.supabaseClient
+        .from('polls')
+        .update({ members: updatedMembers })
+        .match({ id: pollId });
+
+      if (updateError) throw updateError;
       return true;
+    } catch (e) {
+      console.error("Failed to join delivery pool in Supabase:", e);
+      return false;
     }
-    return false;
   }
 
-  // Close/Complete a pool (only host or admin can trigger)
-  function closePoll(pollId) {
-    const polls = getPollsState();
-    const index = polls.findIndex(p => p.id === pollId);
-    if (index !== -1) {
-      polls[index].status = 'Closed';
-      savePollsState(polls);
+  // Close/Complete a pool (only host or admin can trigger) in Supabase
+  async function closePoll(pollId) {
+    try {
+      const { error } = await window.supabaseClient
+        .from('polls')
+        .update({ status: 'Closed' })
+        .match({ id: pollId });
+
+      if (error) throw error;
       return true;
+    } catch (e) {
+      console.error("Failed to close delivery pool in Supabase:", e);
+      return false;
     }
-    return false;
   }
 
   // Render active delivery pools in the student view or admin panel
-  function renderDeliveryPolls(container, options = { showJoinAction: true, currentStudentName: '' }) {
+  async function renderDeliveryPolls(container, options = { showJoinAction: true, currentStudentName: '' }) {
     if (!container) return;
-    const polls = getPollsState();
     
-    // Show active ones first, but show closed ones muted at the end
+    container.innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-secondary)">Syncing active delivery pools...</div>`;
+    
+    const polls = await getPollsState();
+    
     const activePolls = polls.filter(p => p.status === 'Active');
     const closedPolls = polls.filter(p => p.status === 'Closed');
     const allToShow = [...activePolls, ...closedPolls];
@@ -157,10 +205,12 @@
 
     // Add click handler for closing
     container.querySelectorAll('.btn-close-pool').forEach(btn => {
-      btn.addEventListener('click', (e) => {
+      btn.addEventListener('click', async (e) => {
         const id = e.currentTarget.dataset.id;
-        closePoll(id);
-        renderDeliveryPolls(container, options);
+        
+        e.currentTarget.disabled = true;
+        await closePoll(id);
+        await renderDeliveryPolls(container, options);
         showToast('Delivery pool closed.');
       });
     });
@@ -186,8 +236,6 @@
 
   // Export to global scope
   window.PollsModule = {
-    getPollsState,
-    savePollsState,
     addPoll,
     joinPoll,
     closePoll,

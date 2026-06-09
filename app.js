@@ -1,4 +1,4 @@
-// HostelHub Main Coordinator App (Global Scope)
+// HostelHub Main Coordinator App (Supabase Connected)
 (function() {
   // DOM Cache
   const dom = {
@@ -145,7 +145,7 @@
     }
   }
 
-  function enterDashboard() {
+  async function enterDashboard() {
     dom.loginScreen.style.display = 'none';
     dom.appDashboard.style.display = 'block';
 
@@ -161,15 +161,15 @@
 
     if (currentUser.role === 'student') {
       dom.studentDashboard.style.display = 'block';
-      window.MenuModule.renderTodayMenu(todayDayName, dom.menuWidgetContainer, true);
-      window.ComplaintsModule.renderStudentComplaints(dom.studentComplaintsContainer, currentUser.name);
-      window.PollsModule.renderDeliveryPolls(dom.deliveryPollsContainer, { showJoinAction: true, currentStudentName: currentUser.name });
+      await window.MenuModule.renderTodayMenu(todayDayName, dom.menuWidgetContainer, true);
+      await window.ComplaintsModule.renderStudentComplaints(dom.studentComplaintsContainer, currentUser.name);
+      await window.PollsModule.renderDeliveryPolls(dom.deliveryPollsContainer, { showJoinAction: true, currentStudentName: currentUser.name });
     } else if (currentUser.role === 'warden') {
       dom.wardenDashboard.style.display = 'block';
-      loadWardenDashboard();
+      await loadWardenDashboard();
     } else if (currentUser.role === 'admin') {
       dom.adminDashboard.style.display = 'block';
-      loadAdminDashboard();
+      await loadAdminDashboard();
     }
   }
 
@@ -177,22 +177,22 @@
   // 2. VIEW AND TABS TOGGLING
   // ==========================================
   function setupTabListeners() {
-    dom.tabComplaints.addEventListener('click', () => {
+    dom.tabComplaints.addEventListener('click', async () => {
       dom.tabComplaints.classList.add('active');
       dom.tabPools.classList.remove('active');
       dom.panelComplaints.style.display = 'block';
       dom.panelPools.style.display = 'none';
       
-      window.ComplaintsModule.renderStudentComplaints(dom.studentComplaintsContainer, currentUser.name);
+      await window.ComplaintsModule.renderStudentComplaints(dom.studentComplaintsContainer, currentUser.name);
     });
 
-    dom.tabPools.addEventListener('click', () => {
+    dom.tabPools.addEventListener('click', async () => {
       dom.tabPools.classList.add('active');
       dom.tabComplaints.classList.remove('active');
       dom.panelPools.style.display = 'block';
       dom.panelComplaints.style.display = 'none';
       
-      window.PollsModule.renderDeliveryPolls(dom.deliveryPollsContainer, { showJoinAction: true, currentStudentName: currentUser.name });
+      await window.PollsModule.renderDeliveryPolls(dom.deliveryPollsContainer, { showJoinAction: true, currentStudentName: currentUser.name });
     });
   }
 
@@ -200,9 +200,9 @@
   // 3. MODAL POPUPS TRIGGERS
   // ==========================================
   function setupModalListeners() {
-    dom.btnViewWeeklyMenu.addEventListener('click', () => {
-      window.MenuModule.renderWeeklyMenuTable(dom.weeklyMenuTableContainer);
+    dom.btnViewWeeklyMenu.addEventListener('click', async () => {
       dom.weeklyMenuModal.classList.add('active');
+      await window.MenuModule.renderWeeklyMenuTable(dom.weeklyMenuTableContainer);
     });
 
     dom.btnCloseWeeklyModal.addEventListener('click', () => {
@@ -249,7 +249,7 @@
       dom.complaintForm.reset();
     });
 
-    dom.complaintForm.addEventListener('submit', (e) => {
+    dom.complaintForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       
       const category = document.getElementById('comp-category').value;
@@ -257,7 +257,11 @@
       const title = document.getElementById('comp-title').value.trim();
       const description = document.getElementById('comp-desc').value.trim();
 
-      window.ComplaintsModule.addComplaint({
+      const submitBtn = dom.complaintForm.querySelector('button[type="submit"]');
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Submitting to database...";
+
+      await window.ComplaintsModule.addComplaint({
         studentName: currentUser.name,
         roomNo: currentUser.room.replace('Room ', ''),
         category,
@@ -269,8 +273,10 @@
       dom.complaintForm.reset();
       dom.complaintFormWrapper.style.display = 'none';
       dom.btnShowComplaintForm.style.display = 'block';
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Submit Ticket";
       
-      window.ComplaintsModule.renderStudentComplaints(dom.studentComplaintsContainer, currentUser.name);
+      await window.ComplaintsModule.renderStudentComplaints(dom.studentComplaintsContainer, currentUser.name);
       showToast('Complaint ticket filed successfully!');
     });
   }
@@ -279,7 +285,7 @@
   // 5. DELIVERY POOLS GROUP ORDERING
   // ==========================================
   function setupPoolListeners() {
-    dom.startPoolForm.addEventListener('submit', (e) => {
+    dom.startPoolForm.addEventListener('submit', async (e) => {
       e.preventDefault();
 
       const appName = document.getElementById('pool-app').value;
@@ -287,7 +293,11 @@
       const meetingSpot = document.getElementById('pool-spot').value.trim();
       const description = document.getElementById('pool-desc').value.trim();
 
-      window.PollsModule.addPoll({
+      const submitBtn = dom.startPoolForm.querySelector('button[type="submit"]');
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Launching pool...";
+
+      await window.PollsModule.addPoll({
         creatorName: currentUser.name,
         roomNo: currentUser.room.replace('Room ', ''),
         appName,
@@ -298,12 +308,14 @@
 
       dom.startPoolModal.classList.remove('active');
       dom.startPoolForm.reset();
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Launch Active Group Pool";
       
-      window.PollsModule.renderDeliveryPolls(dom.deliveryPollsContainer, { showJoinAction: true, currentStudentName: currentUser.name });
+      await window.PollsModule.renderDeliveryPolls(dom.deliveryPollsContainer, { showJoinAction: true, currentStudentName: currentUser.name });
       showToast('Delivery group order launched!');
     });
 
-    dom.joinPoolForm.addEventListener('submit', (e) => {
+    dom.joinPoolForm.addEventListener('submit', async (e) => {
       e.preventDefault();
 
       const pollId = document.getElementById('join-poll-id').value;
@@ -311,13 +323,19 @@
       const room = document.getElementById('join-room').value.trim();
       const items = document.getElementById('join-items').value.trim();
 
-      const success = window.PollsModule.joinPoll(pollId, name, room, items);
+      const submitBtn = dom.joinPoolForm.querySelector('button[type="submit"]');
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Joining pool...";
+
+      const success = await window.PollsModule.joinPoll(pollId, name, room, items);
 
       dom.joinPoolModal.classList.remove('active');
       dom.joinPoolForm.reset();
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Request Group Inclusion";
 
       if (success) {
-        window.PollsModule.renderDeliveryPolls(dom.deliveryPollsContainer, { showJoinAction: true, currentStudentName: currentUser.name });
+        await window.PollsModule.renderDeliveryPolls(dom.deliveryPollsContainer, { showJoinAction: true, currentStudentName: currentUser.name });
         showToast('Successfully joined the group order pool!');
       } else {
         showToast('Error: This pool is no longer active.');
@@ -329,13 +347,13 @@
   // 6. WARDEN INTERFACES & FILTERING
   // ==========================================
   function setupWardenFilterListeners() {
-    const triggerFilter = () => {
+    const triggerFilter = async () => {
       const filters = {
         status: dom.wardenFilterStatus.value,
         category: dom.wardenFilterCategory.value,
         urgency: dom.wardenFilterUrgency.value
       };
-      window.ComplaintsModule.renderWardenComplaints(dom.wardenComplaintsContainer, filters);
+      await window.ComplaintsModule.renderWardenComplaints(dom.wardenComplaintsContainer, filters);
     };
 
     dom.wardenFilterStatus.addEventListener('change', triggerFilter);
@@ -343,13 +361,13 @@
     dom.wardenFilterUrgency.addEventListener('change', triggerFilter);
   }
 
-  function loadWardenDashboard() {
-    updateWardenStats();
-    window.ComplaintsModule.renderWardenComplaints(dom.wardenComplaintsContainer);
+  async function loadWardenDashboard() {
+    await updateWardenStats();
+    await window.ComplaintsModule.renderWardenComplaints(dom.wardenComplaintsContainer);
   }
 
-  function updateWardenStats() {
-    const complaints = window.ComplaintsModule.getComplaintsState();
+  async function updateWardenStats() {
+    const complaints = await window.ComplaintsModule.getComplaintsState();
     const pending = complaints.filter(c => c.status === 'Pending').length;
     const inprogress = complaints.filter(c => c.status === 'In Progress').length;
     const resolved = complaints.filter(c => c.status === 'Resolved').length;
@@ -368,24 +386,33 @@
     const dayButtons = document.querySelectorAll('.admin-day-select');
     
     dayButtons.forEach(btn => {
-      btn.addEventListener('click', (e) => {
+      btn.addEventListener('click', async (e) => {
         dayButtons.forEach(b => b.classList.remove('active'));
         const target = e.currentTarget;
         target.classList.add('active');
         
         const selectedDay = target.dataset.day;
-        window.MenuModule.renderAdminMenuEditor(selectedDay, dom.adminMenuFormContainer);
+        await window.MenuModule.renderAdminMenuEditor(selectedDay, dom.adminMenuFormContainer);
       });
     });
   }
 
-  function loadAdminDashboard() {
-    const complaints = window.ComplaintsModule.getComplaintsState();
-    const polls = window.PollsModule.getPollsState();
+  async function loadAdminDashboard() {
+    const complaints = await window.ComplaintsModule.getComplaintsState();
+    
+    // We get pools directly from Supabase
+    let activePools = 0;
+    try {
+      const { data } = await window.supabaseClient
+        .from('polls')
+        .select('status')
+        .match({ status: 'Active' });
+      activePools = data ? data.length : 0;
+    } catch(err) {
+      console.error(err);
+    }
     
     const totalComp = complaints.length;
-    const activePools = polls.filter(p => p.status === 'Active').length;
-    
     const solved = complaints.filter(c => c.status === 'Resolved').length;
     const solvedPct = totalComp > 0 ? Math.round((solved / totalComp) * 100) : 100;
 
@@ -417,9 +444,9 @@
 
   dom.wardenDashboard.addEventListener('click', (e) => {
     if (e.target.classList.contains('btn-resolve-trigger') || e.target.classList.contains('btn-inprogress-trigger')) {
-      setTimeout(() => {
-        updateWardenStats();
-      }, 50);
+      setTimeout(async () => {
+        await updateWardenStats();
+      }, 200);
     }
   });
 })();
